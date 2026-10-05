@@ -16,12 +16,23 @@ int main() {
 
     int cellSize = width / 40;
 
-    Grid grid(width, height, cellSize, false);
+    Grid grid(height + cellSize * 8, height, cellSize, true);
+
+    sf::Font font;
+    if (!font.openFromFile("assets/lemon_milk.ttf")) {
+        return 1;
+    }
 
     sf::RectangleShape cell({
         static_cast<float>(cellSize),
         static_cast<float>(cellSize)
     });
+
+    sf::Text title(font);
+    title.setCharacterSize(96);
+    title.setPosition({2020.f, 80.f});
+    title.setString("Citadel");
+    title.setFillColor(sf::Color::Black);
 
     while (window.isOpen()) {
 
@@ -43,7 +54,7 @@ int main() {
                 }
         }
 
-        window.clear();
+        window.clear(sf::Color::White);
 
         for (int x = 0; x < grid.getColumns(); x++) {
             for (int y = 0; y < grid.getRows(); y++) {
@@ -55,7 +66,7 @@ int main() {
                     static_cast<float>(y * cellSize)
                 });
 
-                if (grid.getCell(x, y) == 0) cell.setFillColor(sf::Color::Blue);
+                if (grid.getCell(x, y) == 0) cell.setFillColor(sf::Color(0, 128, 255));
                 else if (grid.getCell(x, y) == 1) cell.setFillColor(sf::Color::Green);
                 else cell.setFillColor(sf::Color::Black);
 
@@ -63,6 +74,9 @@ int main() {
             }
         }
 
+        grid.draw(window);
+
+        window.draw(title);
         window.display();
     }
 
