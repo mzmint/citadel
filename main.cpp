@@ -1,7 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "Grid.h"
 
-
 int main() {
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
 
@@ -21,6 +20,21 @@ int main() {
 
     sf::Font font;
     if (!font.openFromFile("assets/lemon_milk.ttf")) {
+        return 1;
+    }
+
+    sf::Texture sq;
+    sf::Texture st;
+    sf::Texture sc;
+    sf::Texture ss;
+    sf::Texture sb;
+    sf::Texture se;
+    if (!sq.loadFromFile("assets/street-quad.png")
+        || !st.loadFromFile("assets/street-tri.png")
+        || !sc.loadFromFile("assets/street-corner.png")
+        || !ss.loadFromFile("assets/street-single.png")
+        || !sb.loadFromFile("assets/street-straight.png")
+        || !se.loadFromFile("assets/street-end.png")) {
         return 1;
     }
 
@@ -123,23 +137,175 @@ int main() {
         }
 
         window.clear(sf::Color::White);
+        sf::Sprite streetSprite(sb);
 
         for (int x = 0; x < grid.getColumns(); x++) {
             for (int y = 0; y < grid.getRows(); y++) {
 
-                if (grid.getCell(x, y) >= 4) grid.setCell(x, y, 0);
+                int value = grid.getCell(x, y);
 
                 cell.setPosition({
                     static_cast<float>(x * cellSize),
                     static_cast<float>(y * cellSize)
                 });
 
-                if (grid.getCell(x, y) == 0) cell.setFillColor(sf::Color(0, 128, 255));
-                else if (grid.getCell(x, y) == 1) cell.setFillColor(sf::Color::Green);
-                else if (grid.getCell(x, y) == 2) cell.setFillColor(sf::Color::Black);
-                else cell.setFillColor(sf::Color::Red);
+                // WATER
+                if (value == 0) {
+                    cell.setFillColor(sf::Color(0, 128, 255));
+                    window.draw(cell);
+                }
 
-                window.draw(cell);
+                // LAND
+                else if (value == 1) {
+                    cell.setFillColor(sf::Color::Green);
+                    window.draw(cell);
+                }
+
+                // HOUSE
+                else if (value == 3) {
+
+                    bool nextToStreet = false;
+
+                    if (x > 0 &&
+                        grid.getCell(x - 1, y) == 2)
+                        nextToStreet = true;
+
+                    if (x < grid.getColumns() - 1 &&
+                        grid.getCell(x + 1, y) == 2)
+                        nextToStreet = true;
+
+                    if (y > 0 &&
+                        grid.getCell(x, y - 1) == 2)
+                        nextToStreet = true;
+
+                    if (y < grid.getRows() - 1 &&
+                        grid.getCell(x, y + 1) == 2)
+                        nextToStreet = true;
+
+                    if (nextToStreet) {
+                        cell.setFillColor(sf::Color::Red);
+                        window.draw(cell);
+                    }
+                }
+
+                // STREET
+                else if (value == 2) {
+
+                    bool up =
+                        y > 0 &&
+                        grid.getCell(x, y - 1) == 2;
+
+                    bool right =
+                        x < grid.getColumns() - 1 &&
+                        grid.getCell(x + 1, y) == 2;
+
+                    bool down =
+                        y < grid.getRows() - 1 &&
+                        grid.getCell(x, y + 1) == 2;
+
+                    bool left =
+                        x > 0 &&
+                        grid.getCell(x - 1, y) == 2;
+
+                    int connections =
+                        up + right + down + left;
+
+                    // Reset sprite state every cell
+                    streetSprite.setRotation(sf::degrees(0));
+                    streetSprite.setScale({1.f, 1.f});
+
+                    // FOUR-WAY
+                    if (connections == 4) {
+                        streetSprite.setTexture(sq);
+                    }
+
+                    // THREE-WAY
+                    else if (connections == 3) {
+
+                        streetSprite.setTexture(st);
+
+                        if (!up)
+                            streetSprite.setRotation(sf::degrees(0));
+
+                        else if (!right)
+                            streetSprite.setRotation(sf::degrees(90));
+
+                        else if (!down)
+                            streetSprite.setRotation(sf::degrees(180));
+
+                        else if (!left)
+                            streetSprite.setRotation(sf::degrees(270));
+                    }
+
+                    // TWO-WAY
+                    else if (connections == 2) {
+
+                        // Vertical
+                        if (up && down) {
+                            streetSprite.setTexture(sb);
+                            streetSprite.setRotation(sf::degrees(0));
+                        }
+
+                        // Horizontal
+                        else if (left && right) {
+                            streetSprite.setTexture(sb);
+                            streetSprite.setRotation(sf::degrees(90));
+                        }
+
+                        // CORNER
+                        else {
+                            streetSprite.setTexture(sc);
+
+                            if (up && right)
+                                streetSprite.setRotation(sf::degrees(270));
+
+                            else if (right && down)
+                                streetSprite.setRotation(sf::degrees(0));
+
+                            else if (down && left)
+                                streetSprite.setRotation(sf::degrees(90));
+
+                            else if (left && up)
+                                streetSprite.setRotation(sf::degrees(180));
+                        }
+                    }
+
+                    // ONE-WAY / DEAD END
+                    else if (connections == 1) {
+
+                        streetSprite.setTexture(se);
+
+                        if (up)
+                            streetSprite.setRotation(sf::degrees(180));
+
+                        else if (right)
+                            streetSprite.setRotation(sf::degrees(270));
+
+                        else if (down)
+                            streetSprite.setRotation(sf::degrees(0));
+
+                        else if (left)
+                            streetSprite.setRotation(sf::degrees(90));
+                    }
+
+                    // ISOLATED
+                    else {
+                        streetSprite.setTexture(ss);
+                    }
+
+                    // Center the sprite
+                    streetSprite.setOrigin({
+                        static_cast<float>(cellSize) / 2.f,
+                        static_cast<float>(cellSize) / 2.f
+                    });
+
+                    streetSprite.setPosition({
+                        static_cast<float>(x * cellSize) + cellSize / 2.f,
+                        static_cast<float>(y * cellSize) + cellSize / 2.f
+                    });
+
+                    window.draw(streetSprite);
+                }
             }
         }
 
